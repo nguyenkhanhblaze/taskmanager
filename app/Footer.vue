@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { NavigationMenuItem } from "@nuxt/ui"
-import ParticleImage from "@/components/LogoHeader/ParticleImage.vue"
+// import ParticleImage from "@/components/LogoHeader/ParticleImage.vue"
 
 const items: NavigationMenuItem[] = [
   {
@@ -22,10 +22,10 @@ const items: NavigationMenuItem[] = [
 </script>
 
 <template>
-  <USeparator icon="svg-spinners:wind-toy" type="dashed" class="h-px" />
+  <USeparator icon="" class="h-px" />
   <UFooter>
     <template #left>
-      <ParticleImage />
+      <!-- <ParticleImage /> -->
     </template>
     <template #right>
       <UButton

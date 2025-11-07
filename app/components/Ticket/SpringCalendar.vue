@@ -2,6 +2,8 @@
 import { ref } from "vue";
 import { Motion, MotionConfig } from "motion-v";
 import TextMorph from "@/components/Ticket/TextMorph.vue";
+import LinkPreview from "@/components/LinkPreview/LinkPreview.vue";
+import ButtonComplated from "@/components/ButtonComplated/ButtonComplated.vue";
 
 interface CalendarEvent {
   title: string;
@@ -20,18 +22,22 @@ const calendarData = ref([
   {
     processStatus: "In Process",
     ticket: 1101,
+    title: 'Title_1101',
+    link: 'google.com',
     priority: "Hight",
     events: [{ title: "Party", day: "Tomorrow", time: "5:00 PM" }],
   },
   {
     processStatus: "In Process",
     ticket: 1102,
+    title: 'Title_1102',
     priority: "Hight",
     events: [{ title: "Party", day: "Tomorrow", time: "5:00 PM" }],
   },
   {
     processStatus: "In Process",
     ticket: 1103,
+    title: 'Title_1103',
     priority: "Hight",
     events: [
       { title: "Team Meeting", day: "Today", time: "2:00 PM" },
@@ -41,24 +47,28 @@ const calendarData = ref([
   {
     processStatus: "Pending",
     ticket: 1104,
+    title: 'Title_1104',
     priority: "Medium",
     events: [{ title: "Party", day: "Tomorrow", time: "5:00 PM" }],
   },
   {
     processStatus: "Complated",
     ticket: 1105,
+    title: 'Title_1105',
     priority: "Medium",
     events: [{ title: "Party", day: "Tomorrow", time: "5:00 PM" }],
   },
   {
     processStatus: "Complated",
     ticket: 1106,
+    title: 'Title_1106',
     priority: "Medium",
     events: [{ title: "Party", day: "Tomorrow", time: "5:00 PM" }],
   },
   {
     processStatus: "Complated",
     ticket: 1107,
+    title: 'Title_1107',
     priority: "Low",
     events: [
       { title: "Cry for Monday Blue", day: "Next Week", time: "10:00 AM" },
@@ -97,70 +107,42 @@ const sbValue = ref("Sprint1");
 
 <template>
   <MotionConfig :transition="{ duration: 0.7, type: 'spring', bounce: 0.5 }">
-    <Motion
-      layout
-      as="div"
-      class="flex w-full max-w-lg flex-col gap-6 overflow-hidden rounded-3xl border bg-muted/50 p-8"
-      :animate="{
+    <Motion layout as="div"
+      class="flex w-full max-w-lg flex-col gap-6 overflow-hidden rounded-3xl border bg-muted/50 p-8" :animate="{
         height: 'auto',
-      }"
-    >
+      }">
       <div class="flex ..">
         <div class="grow-11">
-          <TextMorph
-            :text="'#' + calendarData[activeIndex]?.ticket"
-            class="w-fit font-bold"
-            :morph-time="0.5"
-            :cool-down-time="0.1"
-          />
+          <LinkPreview :width="500" :height="425" :url="'https://www.google.com/'">
+
+            <TextMorph :text="'#' + calendarData[activeIndex]?.ticket" class="w-fit font-bold" :morph-time="0.5"
+              :cool-down-time="0.1" />
+          </LinkPreview>
+
         </div>
         <div class="grow-1 text-end">
-          <USelect v-model="sbValue" :items="sbItems" />
+          <!-- <USelect v-model="sbValue" :items="sbItems" /> -->
+          <ButtonComplated :type="'c'" />
         </div>
       </div>
 
-      <Motion
-        v-if="calendarData[activeIndex]?.events"
-        :key="'event-container' + Math.random()"
-        layout
-        as="div"
-        class="flex flex-col gap-4"
-        :initial="{ x: 10, opacity: 0 }"
-        :animate="{ x: 0, opacity: 1 }"
-      >
-        <Motion
-          as="div"
-          class="flex items-center gap-2"
-          layout
-          :initial="{ x: 10, opacity: 0 }"
-          :animate="{ x: 0, opacity: 1 }"
-        >
-          <Icon name="octicon:book" />
-          <span class="font-medium"
-            >Ticket {{ calendarData[activeIndex]?.ticket }}</span
-          >
+      <Motion v-if="calendarData[activeIndex]?.events" :key="'event-container' + Math.random()" layout as="div"
+        class="flex flex-col gap-4" :initial="{ x: 10, opacity: 0 }" :animate="{ x: 0, opacity: 1 }">
+        <Motion as="div" class="flex items-center gap-2" layout :initial="{ x: 10, opacity: 0 }"
+          :animate="{ x: 0, opacity: 1 }">
+          <Icon name="icon-park-outline:align-text-left-one" />
+          <span class="font-medium">{{ calendarData[activeIndex]?.title }}</span>
         </Motion>
-        <Motion
-          as="div"
-          class="flex items-center gap-2"
-          layout
-          :initial="{ x: 10, opacity: 0 }"
-          :animate="{ x: 0, opacity: 1 }"
-        >
+        <Motion as="div" class="flex items-center gap-2" layout :initial="{ x: 10, opacity: 0 }"
+          :animate="{ x: 0, opacity: 1 }">
           <Icon name="octicon:book" />
           <span class="font-medium">Notes</span>
         </Motion>
 
         <div class="flex flex-wrap gap-4">
-          <Motion
-            v-for="event in calendarData[activeIndex]?.events"
-            :key="event.title + event.time + Math.random()"
-            as="div"
-            layout
-            class="w-full max-w-44 rounded-lg border p-3"
-            :initial="{ x: 10, opacity: 0 }"
-            :animate="{ x: 0, opacity: 1 }"
-          >
+          <Motion v-for="event in calendarData[activeIndex]?.events" :key="event.title + event.time + Math.random()"
+            as="div" layout class="w-full max-w-44 rounded-lg border p-3" :initial="{ x: 10, opacity: 0 }"
+            :animate="{ x: 0, opacity: 1 }">
             <p class="text-sm font-medium">{{ event.title }}</p>
             <p class="text-xs text-muted-foreground">
               {{ event.day }}, {{ event.time }}
@@ -169,27 +151,15 @@ const sbValue = ref("Sprint1");
         </div>
       </Motion>
       <USeparator size="md" label="All tickets" />
-
       <div class="flex flex-wrap gap-3">
-        <Motion
-          v-for="(item, index) in calendarData"
-          :key="item.ticket + '-' + index"
-          as="button"
-          layout
+        <Motion v-for="(item, index) in calendarData" :key="item.ticket + '-' + index" as="button" layout
           class="flex flex-col rounded-2xl border border-border p-3 text-center opacity-100 duration-200 hover:bg-muted-foreground/10"
-          :class="
-            activeIndex === index ? 'bg-muted-foreground/5 bg-active' : ''
-          "
-          :while-hover="{ scale: 1.1 }"
-          :while-press="{ scale: 0.8 }"
-          :transition="{ duration: 0.01 }"
-          @click="setActive(index)"
-        >
-          <span class="font-semibold">{{ item.ticket }}</span>
-          <span
-            class="text-xs font-medium uppercase duration-200"
-            :class="stylePriority(item.priority)"
-          >
+          :class="activeIndex === index ? 'bg-muted-foreground/5 bg-active' : ''
+            " :while-hover="{ scale: 1.1 }" :while-press="{ scale: 0.8 }" :transition="{ duration: 0.01 }"
+          @click="setActive(index)">
+          <span class="font-semibold cursor-pointer">{{ item.ticket }}</span>
+
+          <span class="text-xs font-medium uppercase duration-200" :class="stylePriority(item.priority)">
             {{ item.priority }}
           </span>
           <span class="text-xs font-medium uppercase">{{
@@ -203,5 +173,9 @@ const sbValue = ref("Sprint1");
 <style scoped>
 .bg-active {
   box-shadow: #75e6da 0px 3px 9px 3px;
+}
+
+.cursor-pointer {
+  cursor: pointer;
 }
 </style>
