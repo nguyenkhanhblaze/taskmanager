@@ -7,14 +7,15 @@ const switchTheme = () => {
   colorMode.preference = nextTheme.value
 }
 
-const startViewTransition = (event: MouseEvent) => {
+const startViewTransition = (event?: MouseEvent) => {
   if (!document.startViewTransition) {
     switchTheme()
     return
   }
 
-  const x = event.clientX
-  const y = event.clientY
+  const x = event?.clientX ?? window.innerWidth / 2
+  const y = event?.clientY ?? window.innerHeight / 2
+
   const endRadius = Math.hypot(
     Math.max(x, window.innerWidth - x),
     Math.max(y, window.innerHeight - y)
@@ -34,13 +35,17 @@ const startViewTransition = (event: MouseEvent) => {
         ]
       },
       {
-        duration: duration,
+        duration,
         easing: 'cubic-bezier(.76,.32,.29,.99)',
         pseudoElement: '::view-transition-new(root)'
       }
     )
   })
 }
+
+useShortCut(() => {
+  startViewTransition()
+})
 </script>
 
 <template>

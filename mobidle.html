@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sprint Ticket Tracker - Full Features</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+/* --- Base & Reset --- */
+* { box-sizing:border-box; margin:0; padding:0; font-family:'Segoe UI',sans-serif; }
+body { background:#f4f6f9; color:#111827; padding:20px; transition:0.5s; display:flex; justify-content:center; }
+.container { width:100%; max-width:900px; }
+
+/* --- Header --- */
+header { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; margin-bottom:20px; }
+header h2 { font-size:24px; }
+button { padding:6px 12px; border:none; border-radius:10px; cursor:pointer; font-weight:bold; transition: all 0.3s; box-shadow:0 3px 8px rgba(0,0,0,0.1); }
+button:hover { transform: scale(1.05); }
+
+/* --- Sprint Selector --- */
+.sprint-selector { margin-bottom:20px; display:flex; gap:10px; flex-wrap:wrap; }
+.sprint-selector select { padding:6px 12px; border-radius:10px; border:1px solid #ccc; transition:0.3s; }
+.sprint-selector select:focus { outline:none; border-color:#3b82f6; box-shadow:0 0 10px rgba(59,130,246,0.3); }
+
+/* --- Ticket Cards --- */
+#ticketContainer { display:flex; flex-direction:column; gap:10px; }
+.ticket-card { background:white; border-radius:12px; padding:10px 14px; box-shadow:0 3px 10px rgba(0,0,0,0.08); transition:0.3s, transform 0.3s, background 0.5s; display:flex; justify-content:space-between; flex-wrap:wrap; font-size:13px; cursor:grab; position:relative; touch-action: none; }
+.ticket-card.dragging { opacity:0.6; transform:scale(1.02); z-index:1000; }
+.ticket-card.highlight { transform: scale(1.03); box-shadow: 0 5px 15px rgba(59,130,246,0.4); transition: transform 0.2s, box-shadow 0.2s; }
+.ticket-info { flex:1; min-width:120px; margin-bottom:5px; }
+.ticket-info h3 { font-size:14px; margin-bottom:4px; }
+.status-text { font-weight:bold; margin-bottom:4px; display:inline-block; padding:2px 8px; border-radius:20px; color:white; transition: background 0.5s; }
+.note-input { width:100%; margin-top:4px; padding:3px 5px; font-size:12px; border-radius:6px; border:1px solid #ccc; transition:0.3s; resize:none; }
+
+/* --- Status Buttons --- */
+.status-btn { padding:3px 8px; border:none; border-radius:8px; color:white; cursor:pointer; margin-right:3px; transition: all 0.3s; font-weight:bold; font-size:12px; }
+.start { background:#3b82f6; }
+.pending { background:#f59e0b; }
+.done { background:#16a34a; }
+.status-btn.active { animation:pulse 1s infinite; }
+.status-btn:hover { opacity:0.85; transform: scale(1.05); }
+
+/* --- Time Display --- */
+.time-display { font-weight:bold; font-size:13px; min-width:40px; text-align:center; margin-bottom:4px; }
+
+/* --- Charts --- */
+.charts { display:flex; flex-wrap:wrap; gap:15px; margin-top:20px; }
+.chart-container { flex:1; min-width:200px; background:white; border-radius:12px; padding:12px; box-shadow:0 3px 12px rgba(0,0,0,0.08); transition:0.3s; font-size:13px; }
+
+/* --- Animations --- */
+@keyframes pulse { 0% {transform:scale(1);} 50% {transform:scale(1.05);} 100% {transform:scale(1);} }
+
+/* --- Dark Mode --- */
+body.dark { background:#111827; color:#f4f6f9; }
+body.dark .ticket-card, body.dark .chart-container { background:#1f2937; color:#f4f6f9; }
+body.dark .status-btn { color:white; }
+body.dark select { background:#374151; border:1px solid #555; color:#f4f6f9; }
+body.dark button { background:#1f2937; color:white; }
+
+/* --- Responsive --- */
+@media(max-width:768px){
+  header h2 { font-size:20px; margin-bottom:10px; width:100%; text-align:center; }
+  .charts { flex-direction:column; gap:15px; }
+  .ticket-card { flex-direction:column; font-size:12px; }
+  .controls { display:flex; flex-wrap:wrap; gap:5px; justify-content:flex-start; margin-top:5px; }
+  .time-display { font-size:12px; }
+  .status-btn { font-size:11px; padding:2px 6px; margin-bottom:3px; }
+  .ticket-info { min-width:100%; }
+}
+@media(max-width:480px){
+  .container { padding:0 10px; }
+  header { flex-direction:column; align-items:center; }
+  .sprint-selector { justify-content:center; }
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+<header>
+  <h2>Full Feature Sprint Tracker</h2>
+  <button id="darkToggle">Toggle Dark Mode</button>
+</header>
+
+<div class="sprint-selector">
+  <label>Sprint:
+    <select id="sprintSelect">
+      <option value="sprint1">Sprint 1 (01 Dec - 14 Dec)</option>
+      <option value="sprint2">Sprint 2 (15 Dec - 28 Dec)</option>
+    </select>
+  </label>
+</div>
+
+<div id="ticketContainer"></div>
+
+<div class="charts">
+  <div class="chart-container">
+    <h3>Total Tickets by Status</h3>
+    <canvas id="statusChart"></canvas>
+  </div>
+  <div class="chart-container">
+    <h3>Total Time per Ticket (hrs)</h3>
+    <canvas id="timeChart"></canvas>
+  </div>
+</div>
+
+<script>
+// --- Dark Mode ---
+document.getElementById('darkToggle').addEventListener('click',()=>{document.body.classList.toggle('dark');});
+
+// --- Ticket Data ---
+const ticketsData = {
+  sprint1:[
+    {id:101,title:"Payment outage",status:"Not Started",total:0,lastStart:null,note:""},
+    {id:102,title:"Account access",status:"Not Started",total:0,lastStart:null,note:""},
+    {id:103,title:"System bug",status:"Not Started",total:0,lastStart:null,note:""}
+  ],
+  sprint2:[
+    {id:201,title:"Feature request",status:"Not Started",total:0,lastStart:null,note:""},
+    {id:202,title:"DB migration",status:"Not Started",total:0,lastStart:null,note:""}
+  ]
+};
+let currentSprint='sprint1';
+const ticketContainer=document.getElementById('ticketContainer');
+
+// --- Render Tickets ---
+function renderTickets(){
+  ticketContainer.innerHTML='';
+  ticketsData[currentSprint].forEach(ticket=>{
+    const card=document.createElement('div');
+    card.className='ticket-card';
+    card.draggable=true;
+    card.dataset.id=ticket.id;
+    card.innerHTML=`
+      <div class="ticket-info">
+        <h3>#${ticket.id} - ${ticket.title}</h3>
+        <span class="status-text" style="background:${getStatusColor(ticket.status)}">${ticket.status}</span>
+        <textarea class="note-input" placeholder="Add note...">${ticket.note}</textarea>
+      </div>
+      <div class="controls">
+        <span class="time-display">${ticket.total.toFixed(2)}h</span>
+        <button class="status-btn start">Start</button>
+        <button class="status-btn pending">Pending</button>
+        <button class="status-btn done">Done</button>
+      </div>
+    `;
+    ticketContainer.appendChild(card);
+
+    const startBtn = card.querySelector('.start');
+    const pendingBtn = card.querySelector('.pending');
+    const doneBtn = card.querySelector('.done');
+    const statusText = card.querySelector('.status-text');
+    const timeDisplay = card.querySelector('.time-display');
+    const noteInput = card.querySelector('.note-input');
+
+    noteInput.addEventListener('input',()=>{ticket.note=noteInput.value;});
+
+    function clearActive(){[startBtn,pendingBtn,doneBtn].forEach(b=>b.classList.remove('active'));}
+
+    startBtn.addEventListener('click',()=>{
+      clearActive(); startBtn.classList.add('active');
+      statusText.textContent='In Progress'; ticket.status='In Progress';
+      statusText.style.background=getStatusColor('In Progress'); if(!ticket.lastStart) ticket.lastStart=Date.now(); updateCharts();
+    });
+    pendingBtn.addEventListener('click',()=>{
+      clearActive(); pendingBtn.classList.add('active');
+      statusText.textContent='Pending'; ticket.status='Pending';
+      statusText.style.background=getStatusColor('Pending'); if(ticket.lastStart){ticket.total+=(Date.now()-ticket.lastStart)/3600000;ticket.lastStart=null;timeDisplay.textContent=ticket.total.toFixed(2)+'h';} updateCharts();
+    });
+    doneBtn.addEventListener('click',()=>{
+      clearActive(); doneBtn.classList.add('active');
+      statusText.textContent='Done'; ticket.status='Done';
+      statusText.style.background=getStatusColor('Done'); if(ticket.lastStart){ticket.total+=(Date.now()-ticket.lastStart)/3600000;ticket.lastStart=null;timeDisplay.textContent=ticket.total.toFixed(2)+'h';} updateCharts();
+    });
+
+    // --- Drag & Drop Mouse ---
+    card.addEventListener('dragstart',(e)=>{card.classList.add('dragging');});
+    card.addEventListener('dragend',(e)=>{card.classList.remove('dragging'); saveOrder();});
+
+    // --- Touch Drag & Drop with Highlight ---
+    let startY=0, offsetY=0;
+    card.addEventListener('touchstart',(e)=>{
+      card.classList.add('dragging');
+      startY=e.touches[0].clientY;
+      offsetY=0;
+    });
+    card.addEventListener('touchmove',(e)=>{
+      e.preventDefault();
+      const touchY=e.touches[0].clientY;
+      offsetY=touchY-startY;
+      card.style.transform=`translateY(${offsetY}px) scale(1.02)`;
+
+      const draggingRect=card.getBoundingClientRect();
+      const siblings=[...ticketContainer.querySelectorAll('.ticket-card')].filter(c=>c!==card);
+      siblings.forEach(sib=>{
+        const sibRect=sib.getBoundingClientRect();
+        if(offsetY>0 && draggingRect.bottom>sibRect.top+sibRect.height/2){
+          ticketContainer.insertBefore(sib,card);
+          sib.classList.add('highlight');
+        }else if(offsetY<0 && draggingRect.top<sibRect.top+sibRect.height/2){
+          ticketContainer.insertBefore(card,sib);
+          sib.classList.add('highlight');
+        }else{
+          sib.classList.remove('highlight');
+        }
+      });
+    });
+    card.addEventListener('touchend',(e)=>{
+      card.classList.remove('dragging');
+      card.style.transform='';
+      [...ticketContainer.querySelectorAll('.ticket-card')].forEach(c=>c.classList.remove('highlight'));
+      saveOrder();
+    });
+  });
+}
+
+// --- Drag Over Mouse ---
+ticketContainer.addEventListener('dragover',(e)=>{
+  e.preventDefault();
+  const afterElement=getDragAfterElement(ticketContainer,e.clientY);
+  const dragging=document.querySelector('.dragging');
+  if(afterElement==null) ticketContainer.appendChild(dragging);
+  else ticketContainer.insertBefore(dragging,afterElement);
+});
+function getDragAfterElement(container,y){
+  const draggableEls=[...container.querySelectorAll('.ticket-card:not(.dragging)')];
+  return draggableEls.reduce((closest,child)=>{
+    const box=child.getBoundingClientRect();
+    const offset=y-(box.top+box.height/2);
+    if(offset<0 && offset>closest.offset){return{offset:offset,element:child};}else{return closest;}},{offset:Number.NEGATIVE_INFINITY}).element;
+}
+function saveOrder(){const order=[...ticketContainer.querySelectorAll('.ticket-card')].map(c=>parseInt(c.dataset.id)); ticketsData[currentSprint].sort((a,b)=>order.indexOf(a.id)-order.indexOf(b.id));}
+
+// --- Status Colors ---
+function getStatusColor(status){switch(status){case"Not Started":return"#9ca3af";case"In Progress":return"#3b82f6";case"Pending":return"#f59e0b";case"Done":return"#16a34a";default:return"#9ca3af";}}
+
+// --- Sprint Selector ---
+document.getElementById('sprintSelect').addEventListener('change',e=>{currentSprint=e.target.value; renderTickets(); updateCharts();});
+
+// --- Charts ---
+const statusCtx=document.getElementById('statusChart').getContext('2d');
+const timeCtx=document.getElementById('timeChart').getContext('2d');
+let statusChart=new Chart(statusCtx,{type:'doughnut',data:{labels:['Not Started','In Progress','Pending','Done'],datasets:[{data:[0,0,0,0],backgroundColor:['#9ca3af','#3b82f6','#f59e0b','#16a34a']}]},options:{responsive:true,plugins:{legend:{position:'bottom'}}}});
+let timeChart=new Chart(timeCtx,{type:'bar',data:{labels:[],datasets:[{label:'Hours',data:[],backgroundColor:'#3b82f6'}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}}});
+
+function updateCharts(){
+  const counts={'Not Started':0,'In Progress':0,'Pending':0,'Done':0};
+  const labels=[], data=[];
+  ticketsData[currentSprint].forEach(t=>{
+    let status=t.status;if(t.lastStart)status='In Progress';counts[status]++;
+    const totalTime=t.total+(t.lastStart?(Date.now()-t.lastStart)/3600000:0);
+    labels.push('#'+t.id);
+    data.push(totalTime.toFixed(2));
+  });
+  statusChart.data.datasets[0].data=[counts['Not Started'],counts['In Progress'],counts['Pending'],counts['Done']];
+  statusChart.update();
+  timeChart.data.labels=labels;
+  timeChart.data.datasets[0].data=data;
+  timeChart.update();
+}
+
+// --- Realtime Timer ---
+setInterval(()=>{
+  ticketsData[currentSprint].forEach(ticket=>{
+    if(ticket.lastStart){
+      const card=document.querySelector(`.ticket-card[data-id='${ticket.id}']`);
+      const display=card.querySelector('.time-display');
+      display.textContent=(ticket.total+(Date.now()-ticket.lastStart)/3600000).toFixed(2)+'h';
+    }
+  });
+  updateCharts();
+},1000);
+
+// --- Initial Render ---
+renderTickets();
+updateCharts();
+</script>
+</div>
+</body>
+</html>
